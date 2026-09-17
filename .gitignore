@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.log
+.DS_Store
+backend/prisma/dev.db
+backend/uploads/
+stt-service/__pycache__/
+stt-service/.venv/
+*.pyc
+.vscode/
+.idea/
+coverage/
