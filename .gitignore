@@ -13,3 +13,4 @@ stt-service/.venv/
 .vscode/
 .idea/
 coverage/
+*.tsbuildinfo
