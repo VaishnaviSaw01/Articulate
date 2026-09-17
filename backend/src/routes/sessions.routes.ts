@@ -60,6 +60,11 @@ sessionsRouter.post(
       data: { userId: req.userId!, problemId, language, code, status: "SCORING" },
     });
 
+    // Code scoring is best-effort here: if it fails (e.g. no ANTHROPIC_API_KEY
+    // configured yet), the session still exists and the candidate can move on
+    // to recording their explanation — that flow must never be blocked by the
+    // code-scoring call failing.
+    let codeScoringError: string | null = null;
     try {
       const review = await scoreCodeCorrectness({
         problemTitle: problem.title,
@@ -84,15 +89,15 @@ sessionsRouter.post(
           raw: review as object,
         },
       });
-
-      await prisma.session.update({ where: { id: session.id }, data: { status: "DRAFT" } });
     } catch (err) {
-      await prisma.session.update({ where: { id: session.id }, data: { status: "FAILED" } });
-      throw err;
+      codeScoringError = err instanceof Error ? err.message : "Code scoring failed";
+      console.error(`Code scoring failed for session ${session.id}:`, err);
     }
 
+    await prisma.session.update({ where: { id: session.id }, data: { status: "DRAFT" } });
+
     const full = await prisma.session.findUnique({ where: { id: session.id }, include: sessionInclude });
-    res.status(201).json({ session: full });
+    res.status(201).json({ session: full, codeScoringError });
   })
 );
 
@@ -138,44 +143,57 @@ sessionsRouter.post(
       data: { status: "TRANSCRIBING", audioPath: req.file.path },
     });
 
+    // Transcription failing IS fatal (there's nothing to show without it).
+    // Communication scoring failing after a successful transcription is not:
+    // the transcript and deterministic metrics are still valuable on their
+    // own, so we save them and let the communication score be null rather
+    // than throwing the whole upload away.
+    let transcription: Awaited<ReturnType<typeof transcribeAudio>>;
     try {
-      const transcription = await transcribeAudio(req.file.path, req.file.mimetype);
-      const metrics = computeTranscriptMetrics({
+      transcription = await transcribeAudio(req.file.path, req.file.mimetype);
+    } catch (err) {
+      await prisma.session.update({ where: { id: session.id }, data: { status: "FAILED" } });
+      throw err;
+    }
+
+    const metrics = computeTranscriptMetrics({
+      transcript: transcription.text,
+      durationSec: transcription.durationSec,
+      segments: transcription.segments,
+    });
+
+    await prisma.session.update({
+      where: { id: session.id },
+      data: {
         transcript: transcription.text,
-        durationSec: transcription.durationSec,
-        segments: transcription.segments,
-      });
+        segments: transcription.segments as object,
+        status: "SCORING",
+      },
+    });
 
-      await prisma.session.update({
-        where: { id: session.id },
-        data: {
-          transcript: transcription.text,
-          segments: transcription.segments as object,
-          status: "SCORING",
-        },
-      });
+    await prisma.transcriptMetrics.upsert({
+      where: { sessionId: session.id },
+      create: {
+        sessionId: session.id,
+        wordCount: metrics.wordCount,
+        durationSec: metrics.durationSec,
+        wordsPerMinute: metrics.wordsPerMinute,
+        fillerCount: metrics.fillerCount,
+        fillerBreakdown: metrics.fillerBreakdown as object,
+        longestPauseMs: metrics.longestPauseMs,
+      },
+      update: {
+        wordCount: metrics.wordCount,
+        durationSec: metrics.durationSec,
+        wordsPerMinute: metrics.wordsPerMinute,
+        fillerCount: metrics.fillerCount,
+        fillerBreakdown: metrics.fillerBreakdown as object,
+        longestPauseMs: metrics.longestPauseMs,
+      },
+    });
 
-      await prisma.transcriptMetrics.upsert({
-        where: { sessionId: session.id },
-        create: {
-          sessionId: session.id,
-          wordCount: metrics.wordCount,
-          durationSec: metrics.durationSec,
-          wordsPerMinute: metrics.wordsPerMinute,
-          fillerCount: metrics.fillerCount,
-          fillerBreakdown: metrics.fillerBreakdown as object,
-          longestPauseMs: metrics.longestPauseMs,
-        },
-        update: {
-          wordCount: metrics.wordCount,
-          durationSec: metrics.durationSec,
-          wordsPerMinute: metrics.wordsPerMinute,
-          fillerCount: metrics.fillerCount,
-          fillerBreakdown: metrics.fillerBreakdown as object,
-          longestPauseMs: metrics.longestPauseMs,
-        },
-      });
-
+    let communicationScoringError: string | null = null;
+    try {
       const review = await scoreCommunication({
         problemTitle: session.problem.title,
         problemPrompt: session.problem.prompt,
@@ -207,14 +225,14 @@ sessionsRouter.post(
           raw: review as object,
         },
       });
-
-      await prisma.session.update({ where: { id: session.id }, data: { status: "COMPLETED" } });
     } catch (err) {
-      await prisma.session.update({ where: { id: session.id }, data: { status: "FAILED" } });
-      throw err;
+      communicationScoringError = err instanceof Error ? err.message : "Communication scoring failed";
+      console.error(`Communication scoring failed for session ${session.id}:`, err);
     }
 
+    await prisma.session.update({ where: { id: session.id }, data: { status: "COMPLETED" } });
+
     const full = await prisma.session.findUnique({ where: { id: session.id }, include: sessionInclude });
-    res.json({ session: full });
+    res.json({ session: full, communicationScoringError });
   })
 );
