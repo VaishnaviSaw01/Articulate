@@ -20,7 +20,7 @@ export function History() {
   const scoredCount = sessions.filter((s) => s.communicationScore).length;
 
   return (
-    <div>
+    <div className="mx-auto max-w-5xl px-6 py-8">
       <h1 className="text-2xl font-bold text-slate-900">Your History</h1>
       <p className="mt-1 text-sm text-slate-500">
         Track how your communication score trends across sessions.

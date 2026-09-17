@@ -29,7 +29,7 @@ export function Login() {
   }
 
   return (
-    <div className="mx-auto mt-12 max-w-sm">
+    <div className="mx-auto mt-12 max-w-sm px-4">
       <h1 className="text-2xl font-bold text-slate-900">
         {mode === "login" ? "Log in to Articulate" : "Create your account"}
       </h1>

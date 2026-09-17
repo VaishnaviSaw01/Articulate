@@ -1,6 +1,6 @@
 export function Rubric() {
   return (
-    <div className="prose prose-slate max-w-none">
+    <div className="prose prose-slate mx-auto max-w-5xl px-6 py-8">
       <h1 className="text-2xl font-bold text-slate-900">How scoring works</h1>
       <p className="mt-2 max-w-2xl text-sm text-slate-600">
         Articulate makes two separate, independently-prompted calls to Claude for every session —

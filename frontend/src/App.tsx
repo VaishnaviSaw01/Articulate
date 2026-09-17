@@ -16,9 +16,9 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
 
 export default function App() {
   return (
-    <div className="min-h-full">
+    <div className="flex h-full flex-col">
       <NavBar />
-      <main className="mx-auto max-w-6xl px-6 py-8">
+      <main className="min-h-0 flex-1">
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route

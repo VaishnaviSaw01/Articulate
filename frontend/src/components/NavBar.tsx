@@ -6,29 +6,32 @@ export function NavBar() {
   const navigate = useNavigate();
 
   return (
-    <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link to="/" className="text-lg font-bold tracking-tight text-slate-900">
-          Articulate
+    <header className="h-14 shrink-0 border-b border-black/10 bg-[#1a1a1a]">
+      <div className="flex h-full items-center justify-between px-5">
+        <Link to="/" className="flex items-center gap-2 text-white">
+          <span className="flex h-7 w-7 items-center justify-center rounded bg-comm-600 text-sm font-bold">
+            A
+          </span>
+          <span className="text-base font-bold tracking-tight">Articulate</span>
         </Link>
         {user && (
-          <nav className="flex items-center gap-6 text-sm font-medium text-slate-600">
-            <Link to="/" className="hover:text-slate-900">
+          <nav className="flex items-center gap-5 text-sm font-medium text-slate-300">
+            <Link to="/" className="hover:text-white">
               Problems
             </Link>
-            <Link to="/history" className="hover:text-slate-900">
+            <Link to="/history" className="hover:text-white">
               History
             </Link>
-            <Link to="/rubric" className="hover:text-slate-900">
+            <Link to="/rubric" className="hover:text-white">
               Scoring Rubric
             </Link>
-            <span className="text-slate-400">{user.email}</span>
+            <span className="hidden text-slate-500 sm:inline">{user.email}</span>
             <button
               onClick={() => {
                 logout();
                 navigate("/login");
               }}
-              className="rounded-md border border-slate-300 px-3 py-1.5 hover:bg-slate-50"
+              className="rounded-md border border-slate-600 px-3 py-1.5 text-slate-200 hover:border-slate-400 hover:text-white"
             >
               Log out
             </button>

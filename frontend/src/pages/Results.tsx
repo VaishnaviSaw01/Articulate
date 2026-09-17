@@ -54,13 +54,13 @@ export function Results() {
     };
   }, [id]);
 
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
-  if (!session) return <p className="text-sm text-slate-500">Loading results...</p>;
+  if (error) return <p className="px-6 py-8 text-sm text-red-600">{error}</p>;
+  if (!session) return <p className="px-6 py-8 text-sm text-slate-500">Loading results...</p>;
 
   const stillProcessing = session.status === "TRANSCRIBING" || session.status === "SCORING";
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       <Headline session={session} />
 
       {stillProcessing && (
