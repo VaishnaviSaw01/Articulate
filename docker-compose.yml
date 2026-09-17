@@ -16,5 +16,51 @@ services:
       timeout: 5s
       retries: 10
 
+  stt-service:
+    build: ./stt-service
+    restart: unless-stopped
+    environment:
+      WHISPER_MODEL_SIZE: base
+      WHISPER_DEVICE: cpu
+      WHISPER_COMPUTE_TYPE: int8
+    ports:
+      - "8001:8000"
+    volumes:
+      - whisper-models:/root/.cache/huggingface
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      stt-service:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://articulate:articulate@postgres:5432/articulate?schema=public
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      JWT_EXPIRES_IN: 7d
+      STT_SERVICE_URL: http://stt-service:8000
+      CORS_ORIGIN: http://localhost:5173
+      PORT: 4000
+    ports:
+      - "4000:4000"
+    volumes:
+      - backend-uploads:/app/uploads
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:4000
+    ports:
+      - "5173:5173"
+
 volumes:
   postgres-data:
+  whisper-models:
+  backend-uploads:
